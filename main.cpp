@@ -8,10 +8,12 @@
 #include "Matrix4.h"
 #include "FPS.h"
 #include "Sprite.h"
-
+#include "Object3d.h"
 #include <xaudio2.h>
 #include <fstream>
-#include<wrl.h>
+#include <wrl.h>
+#include "SampleObject3d.h"
+#include "Skydome.h"
 
 using namespace DirectX;
 using namespace std;
@@ -177,16 +179,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ComPtr<IXAudio2> xAudio2;
 	IXAudio2MasteringVoice* masterVoice;
 
-
-
-
-
 	////////////////////////////
 	//------音声読み込み--------//
 	///////////////////////////
-	
-	
-	
 	
 	SoundData soundData1 = SoundLoadWave("Resources/Alarm01.wav");
 	SoundData soundData2 = SoundLoadWave("Resources/Alarm01.wav");
@@ -243,6 +238,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//FPSクラスの初期化
 	FPS* fps = new FPS;
 
+	// 3Dオブジェクト静的初期化
+	Object3d::StaticInitialize(DXInit.device.Get(), WindowsApp::window_width, WindowsApp::window_height);
+	Object3d* object3d = nullptr;
+
+	SampleObject3d::StaticInitialize(DXInit.device.Get(), WindowsApp::window_width, WindowsApp::window_height);
+	SampleObject3d* sampleobject3d = nullptr;
+
+	Skydome::StaticInitialize(DXInit.device.Get(), WindowsApp::window_width, WindowsApp::window_height);
+	Skydome* skydome = nullptr;
+
 	// --- DirectX初期化処理　ここまで --- //
 
 
@@ -258,6 +263,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	};
 
 	SceneNo sceneNo_ = SceneNo::Title;
+
+	// 3Dオブジェクト生成
+	object3d = Object3d::Create();
+	object3d->Update();
+
+
+	sampleobject3d = SampleObject3d::Create();
+	sampleobject3d->Update();
+
+	skydome = Skydome::Create();
+	skydome->Update();
 
 	//OX::DebugFont::initialize(g_pD3DDev, 2500, 1024);
 
@@ -1857,43 +1873,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Title->Draw();
 
 			Sprite::PostDraw();
+			
+
 		}
 
 		if (sceneNo_ == SceneNo::Game) {
-			//0番定数バッファビュー(CBV)の設定コマンド
-			DXInit.commandList->SetGraphicsRootConstantBufferView(2, constBuffTransform0->GetGPUVirtualAddress());
 
-			//インデックスバッファビューの設定コマンド
-			DXInit.commandList->IASetIndexBuffer(&ibView);
+			Skydome::PreDraw(DXInit.commandList.Get());
+			skydome->Draw();
+			Skydome::PostDraw();
 
-			// 描画コマンド
-			DXInit.commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0);
+			Object3d::PreDraw(DXInit.commandList.Get());
+			object3d->Draw();
+			Object3d::PostDraw();
 
-			if (Hit == FALSE) {
-				//1番定数バッファビュー(CBV)の設定コマンド
-				DXInit.commandList->SetGraphicsRootConstantBufferView(2, constBuffTransform1->GetGPUVirtualAddress());
-
-				// 描画コマンド
-				DXInit.commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0);
-			}
-
-			if (Hit2 == FALSE) {
-				DXInit.commandList->SetGraphicsRootConstantBufferView(2, constBuffTransform2->GetGPUVirtualAddress());
-
-				DXInit.commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0);
-			}
-
-			if (Hit3 == FALSE) {
-				DXInit.commandList->SetGraphicsRootConstantBufferView(2, constBuffTransform3->GetGPUVirtualAddress());
-
-				DXInit.commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0);
-			}
-
-			if (Hit4 == FALSE) {
-				DXInit.commandList->SetGraphicsRootConstantBufferView(2, constBuffTransform4->GetGPUVirtualAddress());
-
-				DXInit.commandList->DrawIndexedInstanced(_countof(indices), 1, 0, 0, 0);
-			}
+			SampleObject3d::PreDraw(DXInit.commandList.Get());
+			sampleobject3d->Draw();
+			SampleObject3d::PostDraw();
 		}
 
 		if (sceneNo_ == SceneNo::Tuto) {
@@ -2007,7 +2003,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	UnregisterClass(winApp.w.lpszClassName, winApp.w.hInstance);
 
 	delete fps;
-
+	delete object3d;
+	delete sampleobject3d;
+	delete skydome;
 	//UnregisterClass(subWinApp.w.lpszClassName, subWinApp.w.hInstance);
 
 	//XAudio2解放
